@@ -28,7 +28,7 @@ type FormData = z.infer<typeof schema>;
 export default function AuthPage() {
   const searchParams = useSearchParams();
   const { isLoggedIn, loading } = useAuth(null as any);
-  const [isLogin, setIsLogin] = useState(searchParams.get("mode") === "login");
+  const [isLogin, setIsLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
@@ -41,6 +41,7 @@ export default function AuthPage() {
     resolver: zodResolver(schema),
   });
 
+  // Update state inside useEffect, ensuring this only runs on the client side
   useEffect(() => {
     const mode = searchParams.get("mode");
     setIsLogin(mode === "login");
