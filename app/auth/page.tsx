@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react"; // Added Suspense
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -85,67 +85,66 @@ export default function AuthPage() {
   if (loading) return <Loader />;
 
   return (
-    <Suspense fallback={<div>Loading...</div>}> {/* Suspense boundary here */}
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Toaster position="top-center" reverseOrder={false} />
-        <div className="w-full max-w-[360px] space-y-6">
-          <div className="space-y-2 text-center">
-            <div className="h-3 w-3 rounded-full bg-primary mx-auto mb-6" />
-            <h1 className="text-xl font-light">
-              {isLogin ? "Welcome back" : "Start your free trial"}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {isLogin ? "Sign in to your account" : "No credit card required"}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <Input
-                type="email"
-                placeholder="Email"
-                className="h-12"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-              )}
-            </div>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                className="h-12 pr-10"
-                {...register("password")}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-500" />
-                ) : (
-                  <Eye className="h-5 w-5 text-gray-500" />
-                )}
-              </button>
-              {errors.password && (
-                <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-              )}
-            </div>
-            <Button type="submit" className="w-full h-12 text-sm">
-              {isLogin ? "Sign in" : "Create account"}
-            </Button>
-          </form>
-
-          <p className="text-center text-sm text-muted-foreground">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-            <button onClick={toggleMode} className="underline text-neutral-800">
-              {isLogin ? "Sign up" : "Sign in"}
-            </button>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Toaster position="top-center" reverseOrder={false} />
+      <div className="w-full max-w-[360px] space-y-6">
+        <div className="space-y-2 text-center">
+          <div className="h-3 w-3 rounded-full bg-primary mx-auto mb-6" />
+          <h1 className="text-xl font-light">
+            {isLogin ? "Welcome back" : "Start your free trial"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {isLogin ? "Sign in to your account" : "No credit card required"}
           </p>
         </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <Input
+              type="email"
+              placeholder="Email"
+              className="h-12"
+              {...register("email")}
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+            )}
+          </div>
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              className="h-12 pr-10"
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5 text-gray-500" />
+              ) : (
+                <Eye className="h-5 w-5 text-gray-500" />
+              )}
+            </button>
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+            )}
+          </div>
+          <Button type="submit" className="w-full h-12 text-sm">
+            {isLogin ? "Sign in" : "Create account"}
+          </Button>
+        </form>
+
+        <p className="text-center text-sm text-muted-foreground">
+          {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+          <button onClick={toggleMode} className="underline text-neutral-800">
+            {isLogin ? "Sign up" : "Sign in"}
+          </button>
+        </p>
       </div>
-    </Suspense>
+    </div>
   );
 }
+
