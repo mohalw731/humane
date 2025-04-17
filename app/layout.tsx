@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import Loader from "@/components/ui/loader";
 
 const geistSans = Outfit({
-  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
@@ -21,14 +20,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <Suspense fallback={<Loader />}>
     <html lang="en">
       <body
-        className={`${geistSans.variable} bg-gradient-to-b from-blue-100 to-slate-50 min-h-screen px-5`}
+        className={`${geistSans.className} bg-gradient-to-b from-blue-100 to-slate-100 min-h-screen p-3`}
       >
         {children}
       </body>
     </html>
-    </Suspense>
   );
 }

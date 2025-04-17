@@ -85,12 +85,12 @@ export default function AuthPage() {
   if (loading) return <Loader />;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center">
       <Toaster position="top-center" reverseOrder={false} />
-      <div className="w-full max-w-[360px] space-y-6">
-        <div className="space-y-2 text-center">
-          <div className="h-3 w-3 rounded-full bg-primary mx-auto mb-6" />
-          <h1 className="text-xl font-light">
+      <div className="w-full max-w-[400px] space-y-6 bg-white px-5 py-10 rounded-xl shadow-lg">
+        <div className="space-y-2 ">
+
+          <h1 className="text-2xl  text-slate-900">
             {isLogin ? "Welcome back" : "Start your free trial"}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -103,7 +103,7 @@ export default function AuthPage() {
             <Input
               type="email"
               placeholder="Email"
-              className="h-12"
+              className="h-12 rounded-xl bg-slate-100 border-none"
               {...register("email")}
             />
             {errors.email && (
@@ -114,13 +114,13 @@ export default function AuthPage() {
             <Input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
-              className="h-12 pr-10"
+              className="h-12 pr-10 rounded-xl bg-slate-100 border-none"
               {...register("password")}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 rounded-xl"
             >
               {showPassword ? (
                 <EyeOff className="h-5 w-5 text-gray-500" />
@@ -132,12 +132,12 @@ export default function AuthPage() {
               <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
             )}
           </div>
-          <Button type="submit" className="w-full h-12 text-sm">
+          <Button type="submit" className="w-full h-12 rounded-xl font-normal bg-slate-900 hover:bg-slate-800">
             {isLogin ? "Sign in" : "Create account"}
           </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
+        <p className=" text-sm text-muted-foreground">
           {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
           <button onClick={toggleMode} className="underline text-neutral-800">
             {isLogin ? "Sign up" : "Sign in"}
