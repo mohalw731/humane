@@ -27,7 +27,7 @@ export default function Page() {
   return (
     <div className="flex ">
       <Sidebar />
-      <div className="flex flex-col w-full h-screen p-10 gap-4 mx-auto">
+      <div className="flex flex-col max-w-6xl w-full h-screen p-10 gap-4 mx-auto">
         <div className="flex flex-col items-start justify-start gap-1">
           <h1 className="text-4xl text-slate-800 font-semibold">
             Good Morning , Mohammed
