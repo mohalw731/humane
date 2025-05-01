@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,7 +32,7 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export default function AuthPage() {
+function AuthPageContent() {
   const searchParams = useSearchParams();
   const { isLoggedIn, loading } = useAuth(null as any);
   const [isLogin, setIsLogin] = useState(searchParams.get("mode") === "login");
@@ -101,7 +101,6 @@ export default function AuthPage() {
           return;
         }
   
-        // Update user profile in Firebase Auth
         try {
           await updateProfile(user, {
             displayName: data.name,
@@ -123,113 +122,122 @@ export default function AuthPage() {
 
   return (
     <main className="max-w-7xl mx-auto">
-            <Navbar />
+      <Navbar />
+      <div className="flex min-h-[80vh] flex-col items-center justify-center ">
+        <Gradient />
+        <Toaster position="top-center" reverseOrder={false} />
+        <Card className="relative w-full max-w-[400px] border-0 bg-black/40 backdrop-blur-xl">
+          <CardContent className="space-y-6 p-6">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold tracking-tight text-white">
+                {isLogin ? "Welcome back" : "Create an account"}
+              </h1>
+              <p className="text-sm text-gray-400">
+                {isLogin ? "Sign in to your account" : "Get started today"}
+              </p>
+            </div>
 
-    <div className="flex min-h-[80vh] flex-col items-center justify-center ">
-      <Gradient />
-      <Toaster position="top-center" reverseOrder={false} />
-      <Card className="relative w-full max-w-[400px] border-0 bg-black/40 backdrop-blur-xl">
-        <CardContent className="space-y-6 p-6">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              {isLogin ? "Welcome back" : "Create an account"}
-            </h1>
-            <p className="text-sm text-gray-400">
-              {isLogin ? "Sign in to your account" : "Get started today"}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {!isLogin && (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <label htmlFor="name" className="sr-only">
+                    Name
+                  </label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Full Name"
+                    className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl"
+                    {...register("name")}
+                  />
+                  {errors.name && (
+                    <p className="text-sm text-red-500">{errors.name.message}</p>
+                  )}
+                </div>
+              )}
               <div className="space-y-2">
-                <label htmlFor="name" className="sr-only">
-                  Name
+                <label htmlFor="email" className="sr-only">
+                  Email
                 </label>
                 <Input
-                  id="name"
-                  type="text"
-                  placeholder="Full Name"
+                  id="email"
+                  type="email"
+                  placeholder="Email"
                   className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl"
-                  {...register("name")}
+                  {...register("email")}
                 />
-                {errors.name && (
-                  <p className="text-sm text-red-500">{errors.name.message}</p>
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email.message}</p>
                 )}
               </div>
-            )}
-            <div className="space-y-2">
-              <label htmlFor="email" className="sr-only">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Email"
-                className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl pr-10"
-                  {...register("password")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 rounded-xl"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
+              <div className="space-y-2">
+                <label htmlFor="password" className="sr-only">
+                  Password
+                </label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Password"
+                    className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl pr-10"
+                    {...register("password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 rounded-xl"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-red-500">{errors.password.message}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
-              )}
-            </div>
-            <Button
-              type="submit"
-              className="w-full bg-[#E0B9E0] text-black hover:bg-[#E0B9E0]/80 rounded-xl py-2"
-            >
-              {isLogin ? "Sign in" : "Create account"}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                className="w-full bg-[#E0B9E0] text-black hover:bg-[#E0B9E0]/80 rounded-xl py-2"
+              >
+                {isLogin ? "Sign in" : "Create account"}
+              </Button>
+            </form>
 
-          <div className="space-y-2 text-sm">
-            {isLogin && (
-              <Link
-                href="/forgot-password"
-                className="block text-gray-400 hover:text-white"
-              >
-                Forgot your password?
-              </Link>
-            )}
-            <p className="text-gray-400">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-              <button
-                onClick={toggleMode}
-                className="text-white hover:text-gray-200"
-              >
-                {isLogin ? "Sign up" : "Sign in"}
-              </button>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="space-y-2 text-sm">
+              {isLogin && (
+                <Link
+                  href="/forgot-password"
+                  className="block text-gray-400 hover:text-white"
+                >
+                  Forgot your password?
+                </Link>
+              )}
+              <p className="text-gray-400">
+                {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+                <button
+                  onClick={toggleMode}
+                  className="text-white hover:text-gray-200"
+                >
+                  {isLogin ? "Sign up" : "Sign in"}
+                </button>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 }
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <AuthPageContent />
+    </Suspense>
+  );
+}
+
+export const dynamic = 'force-dynamic';
