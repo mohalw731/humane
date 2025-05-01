@@ -130,10 +130,10 @@ function AuthPageContent() {
           <CardContent className="space-y-6 p-6">
             <div className="space-y-2">
               <h1 className="text-2xl font-bold tracking-tight text-white">
-                {isLogin ? "Welcome back" : "Create an account"}
+                {isLogin ? "Välkommen tillbaka" : "Skapa konto"}
               </h1>
               <p className="text-sm text-gray-400">
-                {isLogin ? "Sign in to your account" : "Get started today"}
+                {isLogin ? "Logga in för att fortsätta" : "Kom igång med Quickfeed"}
               </p>
             </div>
 
@@ -141,12 +141,12 @@ function AuthPageContent() {
               {!isLogin && (
                 <div className="space-y-2">
                   <label htmlFor="name" className="sr-only">
-                    Name
+                    name
                   </label>
                   <Input
                     id="name"
                     type="text"
-                    placeholder="Full Name"
+                    placeholder="Namn"
                     className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl"
                     {...register("name")}
                   />
@@ -172,13 +172,13 @@ function AuthPageContent() {
               </div>
               <div className="space-y-2">
                 <label htmlFor="password" className="sr-only">
-                  Password
+                  password
                 </label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Password"
+                    placeholder="Lösenord"
                     className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl pr-10"
                     {...register("password")}
                   />
@@ -202,26 +202,19 @@ function AuthPageContent() {
                 type="submit"
                 className="w-full bg-[#E0B9E0] text-black hover:bg-[#E0B9E0]/80 rounded-xl py-2"
               >
-                {isLogin ? "Sign in" : "Create account"}
+                {isLogin ? "Logga in" : "Skapa konto"}
               </Button>
             </form>
 
             <div className="space-y-2 text-sm">
-              {isLogin && (
-                <Link
-                  href="/forgot-password"
-                  className="block text-gray-400 hover:text-white"
-                >
-                  Forgot your password?
-                </Link>
-              )}
+              
               <p className="text-gray-400">
-                {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+                {isLogin ? "Har du inget konto?" : "Har du redan ett konto?"}{" "}
                 <button
                   onClick={toggleMode}
                   className="text-white hover:text-gray-200"
                 >
-                  {isLogin ? "Sign up" : "Sign in"}
+                  {isLogin ? "Skapa konto" : "Logga in"}
                 </button>
               </p>
             </div>
