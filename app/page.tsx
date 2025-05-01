@@ -1,5 +1,6 @@
 'use client';
-import { useEffect } from "react";
+import Navbar from "@/components/layout/navbar/Navbar";
+import Gradient from "@/components/ui/gradient";
 import Loader from "@/components/ui/loader";
 import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
@@ -12,9 +13,9 @@ export default function Home() {
   if (loading) return <Loader />;
 
   return (
-    <div>
-      Landing page
-      <Link href="/auth">signup</Link>
-    </div>
+    <main className="max-w-7xl mx-auto ">
+      <Gradient />
+      <Navbar />
+    </main>
   );
 }

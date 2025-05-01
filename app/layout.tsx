@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
-import { Suspense } from "react";
-import Loader from "@/components/ui/loader";
+
 
 const geistSans = Outfit({
   subsets: ["latin"],
@@ -22,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.className} bg-gradient-to-b from-blue-100 to-slate-100 min-h-screen p-3`}
+        className={`${geistSans.className} px-5`}
       >
         {children}
       </body>

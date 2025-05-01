@@ -6,21 +6,28 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast, Toaster } from "react-hot-toast";
-import { Eye, EyeOff } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Eye, EyeOff, Bell } from "lucide-react";
+import Link from "next/link";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   fetchSignInMethodsForEmail,
+  updateProfile,
 } from "firebase/auth";
-import auth from "@/configs/firebase";
+import auth, { db } from "@/configs/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import Loader from "@/components/ui/loader";
+import { doc, setDoc } from "firebase/firestore";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import Gradient from "@/components/ui/gradient";
+import Navbar from "@/components/layout/navbar/Navbar";
 
 const schema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters long"),
+  name: z.string().min(1, "Name is required"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -46,6 +53,12 @@ export default function AuthPage() {
     setIsLogin(mode === "login");
   }, [searchParams]);
 
+  useEffect(() => {
+    if (isLoggedIn) {
+      router.push("/dashboard");
+    }
+  }, [loading, isLoggedIn, router]);
+
   const toggleMode = () => {
     const newMode = isLogin ? "signup" : "login";
     router.push(`/auth?mode=${newMode}`);
@@ -66,85 +79,157 @@ export default function AuthPage() {
           });
           return;
         }
-        await createUserWithEmailAndPassword(auth, data.email, data.password);
+  
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          data.email,
+          data.password
+        );
+        const user = userCredential.user;
+  
+        try {
+          await setDoc(doc(db, "usersData", user.uid), {
+            email: user.email,
+            name: data.name,
+            uid: user.uid,
+            createdAt: new Date().toISOString(),
+          });
+          console.log("User document created successfully");
+        } catch (firestoreError) {
+          console.error("Firestore error:", firestoreError);
+          toast.error("Failed to create user profile");
+          return;
+        }
+  
+        // Update user profile in Firebase Auth
+        try {
+          await updateProfile(user, {
+            displayName: data.name,
+          });
+        } catch (profileError) {
+          console.error("Profile update error:", profileError);
+        }
+  
         toast.success("Account created successfully!");
         router.push("/dashboard");
       }
     } catch (error: any) {
-      console.error(error);
+      console.error("Authentication error:", error);
       toast.error(error.message || "An error occurred. Please try again.");
     }
   };
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      router.push("/dashboard");
-    }
-  }, [loading, isLoggedIn, router]);
-
   if (loading) return <Loader />;
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <main className="max-w-7xl mx-auto">
+            <Navbar />
+
+    <div className="flex min-h-[80vh] flex-col items-center justify-center ">
+      <Gradient />
       <Toaster position="top-center" reverseOrder={false} />
-      <div className="w-full max-w-[400px] space-y-6 bg-white px-5 py-10 rounded-xl shadow-lg">
-        <div className="space-y-2 ">
-
-          <h1 className="text-2xl  text-slate-900">
-            {isLogin ? "Welcome back" : "Start your free trial"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {isLogin ? "Sign in to your account" : "No credit card required"}
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Input
-              type="email"
-              placeholder="Email"
-              className="h-12 rounded-xl bg-slate-100 border-none"
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-            )}
+      <Card className="relative w-full max-w-[400px] border-0 bg-black/40 backdrop-blur-xl">
+        <CardContent className="space-y-6 p-6">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight text-white">
+              {isLogin ? "Welcome back" : "Create an account"}
+            </h1>
+            <p className="text-sm text-gray-400">
+              {isLogin ? "Sign in to your account" : "Get started today"}
+            </p>
           </div>
-          <div className="relative">
-            <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              className="h-12 pr-10 rounded-xl bg-slate-100 border-none"
-              {...register("password")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 rounded-xl"
-            >
-              {showPassword ? (
-                <EyeOff className="h-5 w-5 text-gray-500" />
-              ) : (
-                <Eye className="h-5 w-5 text-gray-500" />
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {!isLogin && (
+              <div className="space-y-2">
+                <label htmlFor="name" className="sr-only">
+                  Name
+                </label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Full Name"
+                  className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl"
+                  {...register("name")}
+                />
+                {errors.name && (
+                  <p className="text-sm text-red-500">{errors.name.message}</p>
+                )}
+              </div>
+            )}
+            <div className="space-y-2">
+              <label htmlFor="email" className="sr-only">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Email"
+                className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl"
+                {...register("email")}
+              />
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email.message}</p>
               )}
-            </button>
-            {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-            )}
-          </div>
-          <Button type="submit" className="w-full h-12 rounded-xl font-normal bg-slate-900 hover:bg-slate-800">
-            {isLogin ? "Sign in" : "Create account"}
-          </Button>
-        </form>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  className="border-[#1E1F21] border bg-[#141414] text-white placeholder:text-gray-400 rounded-xl pr-10"
+                  {...register("password")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 rounded-xl"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-red-500">{errors.password.message}</p>
+              )}
+            </div>
+            <Button
+              type="submit"
+              className="w-full bg-[#E0B9E0] text-black hover:bg-[#E0B9E0]/80 rounded-xl py-2"
+            >
+              {isLogin ? "Sign in" : "Create account"}
+            </Button>
+          </form>
 
-        <p className=" text-sm text-muted-foreground">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-          <button onClick={toggleMode} className="underline text-neutral-800">
-            {isLogin ? "Sign up" : "Sign in"}
-          </button>
-        </p>
-      </div>
+          <div className="space-y-2 text-sm">
+            {isLogin && (
+              <Link
+                href="/forgot-password"
+                className="block text-gray-400 hover:text-white"
+              >
+                Forgot your password?
+              </Link>
+            )}
+            <p className="text-gray-400">
+              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+              <button
+                onClick={toggleMode}
+                className="text-white hover:text-gray-200"
+              >
+                {isLogin ? "Sign up" : "Sign in"}
+              </button>
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
+    </main>
   );
 }
-
