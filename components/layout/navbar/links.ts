@@ -1,7 +1,7 @@
 export const Links = [
-    { name: "About us", href: "/about" },
-    { name: "Product", href: "/contact" },
-    { name: "Pricing", href: "/blog" },
-    { name: "Contact", href: "/blog" },
+    { name: "Om oss", href: "/about" },
+    { name: "Produkt", href: "/contact" },
+    { name: "Priser", href: "/blog" },
+    { name: "Kontakt", href: "/blog" },
   ];
 

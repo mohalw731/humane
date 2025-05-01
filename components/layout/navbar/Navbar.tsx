@@ -17,9 +17,9 @@ export default function Navbar() {
         <Image
           src="/logo.png"
           alt="logo"
-          width={50}
-          height={50}
-          className="z-10 relative top-[-10px]"
+          width={45}
+          height={45}
+          className="z-20 relative top-[-10px]"
         />
       </Link>
 
@@ -32,10 +32,10 @@ export default function Navbar() {
       </ul>
 
       <button className="bg-[#E0B9E0] px-6 py-2 rounded-full  text-[#141414]  hover:bg-[#DFA2DF] transition-all duration-300 ease-in-out hidden md:block">
-        <Link href="/auth?mode=login">Sign in</Link>
+        <Link href="/auth?mode=login">Logga in</Link>
       </button>
 
-      <button className="md:hidden block z-10">
+      <button className="md:hidden block z-20">
         {!open ? (
           <Menu size={35} onClick={handleMenuToggle} />
         ) : (
