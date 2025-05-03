@@ -2,6 +2,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import Loader from "@/components/ui/loader";
 import SignOutBtn from "@/components/ui/signOutBtn";
+import Navbar from "@/components/layout/navbar/Navbar";
 
 export default function Page() {
   const { loading } = useAuth();
@@ -11,6 +12,7 @@ export default function Page() {
 
   return (
     <div className="">
+      <Navbar />
       <SignOutBtn />
     </div>
   );

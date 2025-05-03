@@ -56,9 +56,7 @@ function AuthPageContent() {
     setIsLogin(mode === "login");
   }, [searchParams]);
 
-  useEffect(() => {
-    if (isLoggedIn) router.push("/dashboard");
-  }, [isLoggedIn, loading, router]);
+
 
   const toggleMode = () => {
     router.push(`/auth?mode=${isLogin ? "signup" : "login"}`);

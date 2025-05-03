@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import auth from "@/configs/firebase";
 
-export function useAuth(redirectTo: string = "/auth?mode=login") {
-  const [authState, setAuthState] = useState<{
-    isLoggedIn: boolean;
-    uid: string | null;
-    user: User | null; // Add full user object
-  }>({
+interface AuthState {
+  isLoggedIn: boolean;
+  uid: string | null;
+  user: User | null;
+  loading: boolean;
+}
+
+export function useAuth(redirectTo: string = "/auth?mode=login"): AuthState {
+  const [authState, setAuthState] = useState<Omit<AuthState, 'loading'>>({
     isLoggedIn: false,
     uid: null,
     user: null,
@@ -25,7 +28,7 @@ export function useAuth(redirectTo: string = "/auth?mode=login") {
         setAuthState({
           isLoggedIn: true,
           uid: user.uid,
-          user: user // Store the full user object
+          user: user
         });
       } else {
         setAuthState({
@@ -33,7 +36,7 @@ export function useAuth(redirectTo: string = "/auth?mode=login") {
           uid: null,
           user: null
         });
-        if (redirectTo) {
+        if (redirectTo && !loading) {
           router.push(redirectTo);
         }
       }
