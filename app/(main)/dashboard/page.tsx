@@ -19,14 +19,6 @@ export default function Page() {
     <div className="">
       <Navbar />
       <Greeting />
-     {!user?.isAdmin && (
-       <div className="flex flex-col items-center justify-center h-screen">
-       <h1 className="text-2xl text-white font-light">User ID: {user?.uid}</h1>
-       <h1 className="text-2xl text-white font-light">Email: {user?.email}</h1>
-       <h1 className="text-2xl text-white font-light">Name: {user?.name}</h1>
-       <h1 className="text-2xl text-white font-light">Is Admin: {user?.isAdmin ? "Yes" : "No"}</h1>
-       </div>
-     )}
 
      <AdminRoomManager />
     </div>
