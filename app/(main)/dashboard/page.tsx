@@ -1,8 +1,9 @@
 "use client";
 import { useAuth } from "@/hooks/useAuth";
 import Loader from "@/components/ui/loader";
-import SignOutBtn from "@/components/ui/signOutBtn";
 import Navbar from "@/components/layout/navbar/Navbar";
+import { Greeting } from "@/components/ui/GetGreating";
+
 
 export default function Page() {
   const { loading } = useAuth();
@@ -13,7 +14,7 @@ export default function Page() {
   return (
     <div className="">
       <Navbar />
-      <SignOutBtn />
+      <Greeting />
     </div>
   );
 }
