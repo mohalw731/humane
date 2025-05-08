@@ -36,7 +36,7 @@ const signupSchema = loginSchema.extend({
 function AuthPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isLoggedIn, loading } = useAuth(null as any);
+  const { loading } = useAuth(null as any);
 
   const [isLogin, setIsLogin] = useState(searchParams.get("mode") === "login");
   const [showPassword, setShowPassword] = useState(false);
@@ -87,6 +87,7 @@ function AuthPageContent() {
             uid: user.uid,
             email: user.email,
             name: data.name,
+            isAdmin: false,
             createdAt: new Date().toISOString(),
           }),
         ]);

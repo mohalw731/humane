@@ -6,19 +6,19 @@ import { Links } from "./links";
 import { LogOut, Menu, Settings, X } from "lucide-react";
 import MobileMenu from "./MobileMenu";
 import { useAuth } from "@/hooks/useAuth";
-import getName from "@/hooks/getName";
 import { Button } from "@/components/ui/button";
 import { getAuth, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import useUserData from "@/hooks/useUser";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [openIcon, setOpenIcon] = useState(false);
   const { isLoggedIn } = useAuth();
-  const { userName, loading } = getName();
+  const {user } = useUserData()
   const auth = getAuth();
   const router = useRouter();
-  const firstNameLetter = userName?.charAt(0);
+  const firstNameLetter = user?.name?.charAt(0);
 
   const handleSignOut = () => {
     signOut(auth)
