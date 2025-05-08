@@ -6,39 +6,74 @@ import {
   addDoc, 
   deleteDoc, 
   doc, 
-  onSnapshot 
+  onSnapshot,
+  Query,
+  DocumentData,
+  Unsubscribe
 } from 'firebase/firestore';
-import { db } from '@/configs/firebase'; // Your Firebase config file
+import { db } from '@/configs/firebase';
 import useUserData from '@/hooks/useUser';
 
-function TodoList() {
-  const [todos, setTodos] = useState([]);
-  const [newTodo, setNewTodo] = useState('');
-  const {user, loading} = useUserData(); // Custom hook to get user data
+
+export interface Todo {
+  id: string;
+  text: string;
+  userId: string;
+  createdAt: Date;
+}
+
+const TodoList = () => {
+  const { user, loading } = useUserData(); // Assuming you have a custom hook to get user data
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [newTodo, setNewTodo] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch todos for the current user
   useEffect(() => {
-    if (!user) return;
+    let unsubscribe: Unsubscribe | undefined;
 
-    const q = query(
-      collection(db, 'todos'),
-      where('userId', '==', user.uid)
-    );
+    if (user) {
+      try {
+        const q: Query<DocumentData> = query(
+          collection(db, 'todos'),
+          where('userId', '==', user.uid)
+        );
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const todosData = [];
-      querySnapshot.forEach((doc) => {
-        todosData.push({ id: doc.id, ...doc.data() });
-      });
-      setTodos(todosData);
-    });
+        unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const todosData: Todo[] = [];
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            todosData.push({
+              id: doc.id,
+              text: data.text,
+              userId: data.userId,
+              createdAt: data.createdAt.toDate()
+            });
+          });
+          setTodos(todosData);
+        });
+      } catch (err) {
+        setError('Failed to fetch todos');
+        console.error('Error fetching todos:', err);
+      }
+    }
 
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [user]);
 
-  const addTodo = async () => {
-    if (!newTodo.trim() || !user) return;
-    
+  const addTodo = async (): Promise<void> => {
+    if (!newTodo.trim()) {
+      setError('Todo cannot be empty');
+      return;
+    }
+
+    if (!user) {
+      setError('You must be logged in to add todos');
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'todos'), {
         text: newTodo,
@@ -46,16 +81,19 @@ function TodoList() {
         createdAt: new Date()
       });
       setNewTodo('');
-    } catch (error) {
-      console.error('Error adding todo:', error);
+      setError(null);
+    } catch (err) {
+      setError('Failed to add todo');
+      console.error('Error adding todo:', err);
     }
   };
 
-  const deleteTodo = async (id) => {
+  const deleteTodo = async (id: string): Promise<void> => {
     try {
       await deleteDoc(doc(db, 'todos', id));
-    } catch (error) {
-      console.error('Error deleting todo:', error);
+    } catch (err) {
+      setError('Failed to delete todo');
+      console.error('Error deleting todo:', err);
     }
   };
 
@@ -65,6 +103,8 @@ function TodoList() {
   return (
     <div className="todo-container">
       <h2>Your Todo List</h2>
+      
+      {error && <div className="error-message">{error}</div>}
       
       <div className="todo-input">
         <input
@@ -78,7 +118,7 @@ function TodoList() {
       </div>
       
       <ul className="todo-list">
-        {todos.map(todo => (
+        {todos.map((todo) => (
           <li key={todo.id}>
             {todo.text}
             <button onClick={() => deleteTodo(todo.id)}>Delete</button>
@@ -87,6 +127,6 @@ function TodoList() {
       </ul>
     </div>
   );
-}
+};
 
 export default TodoList;
