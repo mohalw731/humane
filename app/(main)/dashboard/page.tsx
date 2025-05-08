@@ -6,6 +6,7 @@ import { Greeting } from "@/components/ui/GetGreating";
 import { useRouter } from "next/navigation";
 import useUserData from "@/hooks/useUser";
 import AdminRoomManager from "@/components/Admin";
+import TodoList from "@/components/task";
 
 
 export default function Page() {
@@ -19,7 +20,7 @@ export default function Page() {
     <div className="">
       <Navbar />
       <Greeting />
-
+<TodoList />
      <AdminRoomManager />
     </div>
   );

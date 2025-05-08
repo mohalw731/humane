@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, deleteDoc } from "firebase/firestore";
 import { db } from "@/configs/firebase";
 import useUserData from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Toaster, toast } from "react-hot-toast";
-import { Copy, Plus } from "lucide-react";
+import { Copy, Plus, Trash2, Shield, ShieldOff } from "lucide-react";
 
 interface Room {
   id: string;
@@ -35,7 +35,7 @@ export default function RoomManager() {
   const [newRoomName, setNewRoomName] = useState("");
   const [joinKey, setJoinKey] = useState("");
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
-
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
 
   useEffect(() => {
@@ -67,6 +67,7 @@ export default function RoomManager() {
         usersData.push({ uid: doc.id, ...doc.data() } as User);
       });
       setUsers(usersData);
+      setAllUsers(usersData); // Store all users for admin management
     } catch (error) {
       toast.error("Failed to fetch users");
     }
@@ -134,6 +135,47 @@ export default function RoomManager() {
     }
   };
 
+  const deleteRoom = async (roomId: string) => {
+    if (!user?.isAdmin) return;
+
+    try {
+      await deleteDoc(doc(db, "rooms", roomId));
+      toast.success("Room deleted successfully!");
+      fetchUserRooms();
+      setActiveRoom(null);
+    } catch (error) {
+      toast.error("Failed to delete room");
+    }
+  };
+
+  const toggleAdminStatus = async (userId: string, currentStatus: boolean) => {
+    if (!user?.isAdmin) return;
+
+    try {
+      await updateDoc(doc(db, "usersData", userId), {
+        isAdmin: !currentStatus,
+      });
+      toast.success(`User ${!currentStatus ? "promoted to admin" : "demoted from admin"}`);
+      fetchAllUsers();
+    } catch (error) {
+      toast.error("Failed to update admin status");
+    }
+  };
+
+  const removeUserFromRoom = async (userId: string) => {
+    if (!user?.isAdmin || !activeRoom) return;
+
+    try {
+      await updateDoc(doc(db, "rooms", activeRoom.id), {
+        members: arrayRemove(userId),
+      });
+      toast.success("User removed from room");
+      fetchUserRooms();
+    } catch (error) {
+      toast.error("Failed to remove user");
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -146,7 +188,7 @@ export default function RoomManager() {
   return (
     <div className="container mx-auto p-4">
       <Toaster position="top-center" />
-      <h1 className="text-2xl font-bold mb-6">Room Manager</h1>
+      <h1 className="text-2xl font-bold mb-6">{user.isAdmin ? "Admin Room Manager" : "Room Manager"}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Room Creation Section (only for admins) */}
@@ -207,21 +249,35 @@ export default function RoomManager() {
                   >
                     <div className="flex justify-between items-center">
                       <span className="font-medium">{room.name}</span>
-                      {user.isAdmin && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyToClipboard(room.accessKey);
-                          }}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <div className="flex gap-2">
+                        {user.isAdmin && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyToClipboard(room.accessKey);
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteRoom(room.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="text-sm text-gray-500">
-                      Members: {room.members.length}
+                      Members: {room.members.length} {room.adminId === user?.uid && "(Admin)"}
                     </div>
                   </div>
                 ))
@@ -260,25 +316,28 @@ export default function RoomManager() {
                       <TableCell>{member.email}</TableCell>
                       <TableCell>{member.isAdmin ? "Yes" : "No"}</TableCell>
                       {user.isAdmin && (
-                        <TableCell>
-                          {member.uid !== activeRoom.adminId && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // Only admins can remove users
-                                if (user.isAdmin) {
-                                  updateDoc(doc(db, "rooms", activeRoom.id), {
-                                    members: arrayRemove(member.uid),
-                                  }).then(() => {
-                                    toast.success("User removed");
-                                    fetchUserRooms();
-                                  });
-                                }
-                              }}
-                            >
-                              Remove
-                            </Button>
+                        <TableCell className="flex gap-2">
+                          {member.uid !== user.uid && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleAdminStatus(member.uid, member.isAdmin)}
+                              >
+                                {member.isAdmin ? (
+                                  <ShieldOff className="h-4 w-4 text-yellow-500" />
+                                ) : (
+                                  <Shield className="h-4 w-4 text-green-500" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeUserFromRoom(member.uid)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </>
                           )}
                         </TableCell>
                       )}
@@ -290,6 +349,7 @@ export default function RoomManager() {
           </CardContent>
         </Card>
       )}
+
     </div>
   );
 }
