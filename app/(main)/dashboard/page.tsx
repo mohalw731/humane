@@ -13,7 +13,7 @@ export default function Page() {
   const {user, loading: userDataLoading} = useUserData()
   const router = useRouter();
   if (loading || userDataLoading) return <Loader />;
-  if (!isLoggedIn) return router.push("/auth?mode=login");
+  // if (!isLoggedIn) return router.push("/auth?mode=login");
 
   return (
     <div className="">

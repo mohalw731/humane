@@ -36,11 +36,6 @@ export default function AdminRoomManager() {
   const [joinKey, setJoinKey] = useState("");
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
 
-  useEffect(() => {
-    if (!loading && (!user || !user.isAdmin)) {
-      router.push("/");
-    }
-  }, [user, loading, router]);
 
   useEffect(() => {
     if (user?.isAdmin) {
