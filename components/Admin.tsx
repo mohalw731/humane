@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  doc, setDoc, getDoc, collection, query, where, getDocs, 
-  updateDoc, arrayUnion, arrayRemove, deleteDoc, onSnapshot 
-} from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, arrayRemove, deleteDoc } from "firebase/firestore";
 import { db } from "@/configs/firebase";
 import useUserData from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
@@ -30,12 +27,6 @@ interface User {
   isAdmin: boolean;
 }
 
-interface Todo {
-  id: string;
-  text: string;
-  userId: string;
-}
-
 export default function RoomManager() {
   const { user, loading } = useUserData();
   const router = useRouter();
@@ -45,7 +36,6 @@ export default function RoomManager() {
   const [joinKey, setJoinKey] = useState("");
   const [activeRoom, setActiveRoom] = useState<Room | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [userTodos, setUserTodos] = useState<Record<string, Todo[]>>({});
 
   useEffect(() => {
     if (!loading && !user) {
@@ -82,47 +72,11 @@ export default function RoomManager() {
         usersData.push({ uid: doc.id, ...doc.data() } as User);
       });
       setUsers(usersData);
-      setAllUsers(usersData);
+      setAllUsers(usersData); // Store all users for admin management
     } catch (error) {
       toast.error("Failed to fetch users");
     }
   };
-
-  const fetchUserTodos = async (userId: string) => {
-    try {
-      const q = query(collection(db, 'todos'), where('userId', '==', userId));
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const todosData: Todo[] = [];
-        querySnapshot.forEach((doc) => {
-          todosData.push({ id: doc.id, ...doc.data() } as Todo);
-        });
-        setUserTodos(prev => ({
-          ...prev,
-          [userId]: todosData
-        }));
-      });
-      return unsubscribe;
-    } catch (error) {
-      toast.error("Failed to fetch todos");
-    }
-  };
-
-  useEffect(() => {
-    if (activeRoom) {
-      const unsubscribeFunctions: (() => void)[] = [];
-      
-      activeRoom.members.forEach(memberId => {
-        const unsubscribe = fetchUserTodos(memberId);
-        if (unsubscribe) {
-          unsubscribeFunctions.push(unsubscribe as any);
-        }
-      });
-
-      return () => {
-        unsubscribeFunctions.forEach(unsub => unsub());
-      };
-    }
-  }, [activeRoom]);
 
   const createRoom = async () => {
     if (!user?.isAdmin) return;
@@ -242,6 +196,7 @@ export default function RoomManager() {
       <h1 className="text-2xl font-bold mb-6">{user.isAdmin ? "Admin Room Manager" : "Room Manager"}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Room Creation Section (only for admins) */}
         {user.isAdmin && (
           <Card>
             <CardHeader>
@@ -262,6 +217,7 @@ export default function RoomManager() {
           </Card>
         )}
 
+        {/* Join Room Section */}
         <Card>
           <CardHeader>
             <CardTitle>Join Room</CardTitle>
@@ -280,6 +236,7 @@ export default function RoomManager() {
           </CardContent>
         </Card>
 
+        {/* Your Rooms Section */}
         <Card>
           <CardHeader>
             <CardTitle>Your Rooms</CardTitle>
@@ -335,6 +292,7 @@ export default function RoomManager() {
         </Card>
       </div>
 
+      {/* Room Details Section */}
       {activeRoom && (
         <Card className="mt-6">
           <CardHeader>
@@ -358,103 +316,39 @@ export default function RoomManager() {
                   if (!member) return null;
 
                   return (
-                    <>
-                      <TableRow key={member.uid}>
-                        <TableCell>{member.name}</TableCell>
-                        <TableCell>{member.email}</TableCell>
-                        <TableCell>{member.isAdmin ? "Yes" : "No"}</TableCell>
-                        {user.isAdmin && (
-                          <TableCell className="flex gap-2">
-                            {member.uid !== user.uid && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => toggleAdminStatus(member.uid, member.isAdmin)}
-                                >
-                                  {member.isAdmin ? (
-                                    <ShieldOff className="h-4 w-4 text-yellow-500" />
-                                  ) : (
-                                    <Shield className="h-4 w-4 text-green-500" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeUserFromRoom(member.uid)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-500" />
-                                </Button>
-                              </>
-                            )}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                      
-                      {/* Todos for each user - admin only */}
-                      {user.isAdmin && userTodos[member.uid]?.length > 0 && (
-                        <TableRow>
-                          <TableCell colSpan={user.isAdmin ? 4 : 3}>
-                            <div className="pl-4 border-l-4 border-gray-200">
-                              <h4 className="font-medium mb-2">Todos:</h4>
-                              <ul className="space-y-1">
-                                {userTodos[member.uid].map(todo => (
-                                  <li key={todo.id} className="flex justify-between items-center">
-                                    <span>{todo.text}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                    <TableRow key={member.uid}>
+                      <TableCell>{member.name}</TableCell>
+                      <TableCell>{member.email}</TableCell>
+                      <TableCell>{member.isAdmin ? "Yes" : "No"}</TableCell>
+                      {user.isAdmin && (
+                        <TableCell className="flex gap-2">
+                          {member.uid !== user.uid && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleAdminStatus(member.uid, member.isAdmin)}
+                              >
+                                {member.isAdmin ? (
+                                  <ShieldOff className="h-4 w-4 text-yellow-500" />
+                                ) : (
+                                  <Shield className="h-4 w-4 text-green-500" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeUserFromRoom(member.uid)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </>
+                          )}
+                        </TableCell>
                       )}
-                    </>
+                    </TableRow>
                   );
                 })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {user.isAdmin && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>All Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Admin</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allUsers.map((userData) => (
-                  <TableRow key={userData.uid}>
-                    <TableCell>{userData.name}</TableCell>
-                    <TableCell>{userData.email}</TableCell>
-                    <TableCell>{userData.isAdmin ? "Yes" : "No"}</TableCell>
-                    <TableCell>
-                      {userData.uid !== user.uid && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleAdminStatus(userData.uid, userData.isAdmin)}
-                        >
-                          {userData.isAdmin ? (
-                            <ShieldOff className="h-4 w-4 text-yellow-500" />
-                          ) : (
-                            <Shield className="h-4 w-4 text-green-500" />
-                          )}
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
               </TableBody>
             </Table>
           </CardContent>
