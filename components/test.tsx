@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { FiPlay, FiX, FiSettings } from 'react-icons/fi';
+import { FiPlay, FiX, FiSettings, FiTrash2 } from 'react-icons/fi';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/configs/firebase';
 
 interface TranscriptionSegment {
@@ -65,6 +65,7 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
     useCustomPrompt: false,
     customPrompt: ''
   });
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load settings from Firebase
@@ -77,7 +78,15 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
-          setSettings(docSnap.data() as Settings);
+          const data = docSnap.data() as Settings;
+          setSettings({
+            language: data.language || 'sv',
+            callType: data.callType || 'Discovery',
+            framework: data.framework || 'BANT',
+            customFramework: data.customFramework || '',
+            useCustomPrompt: data.useCustomPrompt || false,
+            customPrompt: data.customPrompt || ''
+          });
         }
       } catch (error) {
         console.error('Error loading settings:', error);
@@ -87,24 +96,35 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
     loadSettings();
   }, [userId]);
 
-  // Save settings to Firebase
-  useEffect(() => {
-    const saveSettings = async () => {
-      if (!userId) return;
-      
-      try {
-        const docRef = doc(db, 'userSettings', userId);
-        await setDoc(docRef, settings);
-      } catch (error) {
-        console.error('Error saving settings:', error);
-      }
-    };
+  // Save settings to Firebase when they change
+  const saveSettingsToFirebase = async (newSettings: Settings) => {
+    if (!userId) return;
+    
+    try {
+      const docRef = doc(db, 'userSettings', userId);
+      await setDoc(docRef, newSettings);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
+  };
 
-    saveSettings();
-  }, [settings, userId]);
+  const handleSettingsChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    const newSettings = {
+      ...settings,
+      [name]: type === 'checkbox' ? checked : value
+    };
+    
+    setSettings(newSettings);
+    saveSettingsToFirebase(newSettings);
+  };
 
   // Load transcription history
   useEffect(() => {
+    if (!userId) return;
+
     const q = query(
       collection(db, 'transcriptions'),
       orderBy('timestamp', 'desc')
@@ -114,16 +134,19 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
       const items: TranscriptionHistoryItem[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        items.push({
-          id: doc.id,
-          timestamp: data.timestamp.toDate(),
-          language: data.language,
-          audioName: data.audioName,
-          transcription: data.transcription,
-          rawText: data.rawText,
-          userId: data.userId,
-          analysis: data.analysis
-        });
+        // Only show transcriptions for the current user
+        if (data.userId === userId) {
+          items.push({
+            id: doc.id,
+            timestamp: data.timestamp.toDate(),
+            language: data.language,
+            audioName: data.audioName,
+            transcription: data.transcription,
+            rawText: data.rawText,
+            userId: data.userId,
+            analysis: data.analysis
+          });
+        }
       });
       setHistory(items);
     });
@@ -131,12 +154,30 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
     return () => unsubscribe();
   }, [userId]);
 
+  const deleteTranscription = async (id: string) => {
+    if (!userId) return;
+    
+    setIsDeleting(id);
+    try {
+      await deleteDoc(doc(db, 'transcriptions', id));
+      // If the deleted item is currently selected, close the modal
+      if (selectedHistoryItem?.id === id) {
+        setSelectedHistoryItem(null);
+      }
+    } catch (error) {
+      console.error('Error deleting transcription:', error);
+      alert(settings.language === 'sv' ? 'Kunde inte radera transkriptionen' : 'Could not delete transcription');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('audio/')) {
       setAudioFile(file);
     } else {
-      alert('Please select an audio file');
+      alert(settings.language === 'sv' ? 'Vänligen välj en ljudfil' : 'Please select an audio file');
     }
   };
 
@@ -174,7 +215,7 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
       let prompt = '';
       
       if (settings.useCustomPrompt && settings.customPrompt) {
-        prompt = settings.customPrompt;
+        prompt = settings.customPrompt.replace('{transcription}', transcriptionText.substring(0, 12000));
       } else {
         const frameworkInstructions = {
           'BANT': {
@@ -414,16 +455,6 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
     setSelectedHistoryItem(null);
   };
 
-  const handleSettingsChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-    
-    setSettings(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -511,12 +542,26 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
                       <span className="text-xs px-2 py-1 bg-[#404040] text-blue-300 rounded-full">
                         {item.language === 'sv' ? 'Svenska' : 'English'}
                       </span>
-                      <button
-                        onClick={() => openHistoryModal(item)}
-                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
-                      >
-                        <span>{settings.language === 'sv' ? 'Visa' : 'View'}</span>
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openHistoryModal(item)}
+                          className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
+                        >
+                          <span>{settings.language === 'sv' ? 'Visa' : 'View'}</span>
+                        </button>
+                        <button
+                          onClick={() => deleteTranscription(item.id)}
+                          disabled={isDeleting === item.id}
+                          className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors flex items-center gap-1"
+                        >
+                          <FiTrash2 className="w-3 h-3" />
+                          {isDeleting === item.id ? (
+                            settings.language === 'sv' ? 'Raderar...' : 'Deleting...'
+                          ) : (
+                            settings.language === 'sv' ? 'Radera' : 'Delete'
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -531,13 +576,27 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
             <div className="bg-[#282828] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-[#383838]">
               <div className="p-4 border-b border-[#383838] flex justify-between items-center">
                 <h2 className="text-xl font-bold truncate text-white">{selectedHistoryItem.audioName}</h2>
-                <button 
-                  onClick={closeModal}
-                  className="p-2 rounded-full hover:bg-[#383838] text-gray-300"
-                  aria-label={settings.language === 'sv' ? 'Stäng' : 'Close'}
-                >
-                  <FiX className="w-5 h-5" />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => deleteTranscription(selectedHistoryItem.id)}
+                    disabled={isDeleting === selectedHistoryItem.id}
+                    className="p-2 rounded-full hover:bg-[#383838] text-red-400"
+                    aria-label={settings.language === 'sv' ? 'Radera' : 'Delete'}
+                  >
+                    {isDeleting === selectedHistoryItem.id ? (
+                      <span className="text-xs">...</span>
+                    ) : (
+                      <FiTrash2 className="w-5 h-5" />
+                    )}
+                  </button>
+                  <button 
+                    onClick={closeModal}
+                    className="p-2 rounded-full hover:bg-[#383838] text-gray-300"
+                    aria-label={settings.language === 'sv' ? 'Stäng' : 'Close'}
+                  >
+                    <FiX className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
               
               <div className="flex border-b border-[#383838]">

@@ -244,7 +244,7 @@ export default function Page() {
        </div>
       </div>
 
-      <RoomList
+      {/* <RoomList
         rooms={rooms}
         activeRoomId={activeRoom?.id || null}
         isAdmin={user?.isAdmin || false}
@@ -263,9 +263,9 @@ export default function Page() {
           onToggleAdminStatus={toggleAdminStatus}
           onRemoveUser={removeUserFromRoom}
         />
-      )}
+      )} */}
 
-      <AudioTranscriber apiKey={process.env.NEXT_PUBLIC_OPENAI_API_KEY || ""}/>
+      <AudioTranscriber apiKey={process.env.NEXT_PUBLIC_OPENAI_API_KEY || ""} userId={user?.uid}/>
     </div>
   );
 }
