@@ -21,7 +21,7 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <button className="px-2 text-white  rounded-xl ">
-          Join team
+          Joina ett team
         </button>
       </DialogTrigger>
       <DialogContent className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">

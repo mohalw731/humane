@@ -26,13 +26,13 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
       <DialogTrigger asChild>
         <button className="flex items-center p-3 text-white">
           {/* <Plus size={20} /> */}
-          Create team
+          Skapa team
         </button>
       </DialogTrigger>
       <DialogContent className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
         <div className="bg-[#18181B] p-6 rounded-lg max-w-md w-full border border-[#2D2D30]">
           <div className="flex justify-between items-center mb-4">
-            <DialogTitle className="text-xl  text-white">Create new <span className='text-primary'>team</span></DialogTitle>
+            <DialogTitle className="text-xl  text-white">Skapa nytt <span className='text-primary'>team</span></DialogTitle>
             <DialogClose className="text-primary transition-colors">
               <X size={20} />
             </DialogClose>
@@ -49,7 +49,7 @@ export const CreateRoomModal: React.FC<CreateRoomModalProps> = ({
               onClick={onCreate}
               className="w-full p-2 text-md bg-[#BCCCE4] text-black rounded-xl hover:bg-[#BCCCE4]/90 transition-colors "
             >
-              Create 
+              Skapa 
             </button>
           </div>
         </div>
