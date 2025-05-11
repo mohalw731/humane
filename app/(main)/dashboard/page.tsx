@@ -265,7 +265,7 @@ export default function Page() {
         />
       )}
 
-      <AudioTranscriber apiKey="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"/>
+      <AudioTranscriber apiKey={process.env.NEXT_PUBLIC_OPENAI_API_KEY || ""}/>
     </div>
   );
 }
