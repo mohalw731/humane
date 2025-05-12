@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { FiPlay, FiX, FiSettings, FiTrash2 } from 'react-icons/fi';
+import { FiPlay, FiX, FiSettings, FiTrash2, FiSend } from 'react-icons/fi';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/configs/firebase';
@@ -22,6 +22,13 @@ interface AnalysisItem {
   time?: string;
 }
 
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
 interface TranscriptionHistoryItem {
   id: string;
   timestamp: Date;
@@ -40,6 +47,7 @@ interface TranscriptionHistoryItem {
     recommendations: AnalysisItem[];
     frameworkEvaluation: string;
   };
+  chatMessages?: ChatMessage[];
 }
 
 interface Settings {
@@ -56,7 +64,7 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
   const [isUploading, setIsUploading] = useState(false);
   const [history, setHistory] = useState<TranscriptionHistoryItem[]>([]);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<TranscriptionHistoryItem | null>(null);
-  const [activeTab, setActiveTab] = useState<'transcription' | 'analysis'>('transcription');
+  const [activeTab, setActiveTab] = useState<'transcription' | 'analysis' | 'chat'>('transcription');
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<Settings>({
     language: 'sv',
@@ -66,6 +74,9 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
     customPrompt: ''
   });
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [chatMessage, setChatMessage] = useState('');
+  const [isSendingChat, setIsSendingChat] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load settings from Firebase
@@ -144,7 +155,13 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
             transcription: data.transcription,
             rawText: data.rawText,
             userId: data.userId,
-            analysis: data.analysis
+            analysis: data.analysis,
+            chatMessages: data.chatMessages?.map((msg: any) => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              timestamp: msg.timestamp?.toDate() || new Date()
+            })) || []
           });
         }
       });
@@ -431,10 +448,11 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
         transcription: formattedTranscription,
         rawText: fullText,
         userId: userId || null,
-        analysis
+        analysis,
+        chatMessages: []
       };
 
-      await saveToFirebase(newItem as TranscriptionHistoryItem);
+      await saveToFirebase(newItem as Omit<TranscriptionHistoryItem, 'id'>);
 
       setAudioFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -455,6 +473,142 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
     setSelectedHistoryItem(null);
   };
 
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatMessage.trim() || !selectedHistoryItem || isSendingChat) return;
+
+    setIsSendingChat(true);
+    const userMessage = chatMessage;
+    setChatMessage('');
+
+    try {
+      // Add user message to chat
+      const userMessageId = Date.now().toString();
+      const userMessageData: ChatMessage = {
+        id: userMessageId,
+        role: 'user',
+        content: userMessage,
+        timestamp: new Date()
+      };
+
+      // Update local state immediately
+      const updatedItem = {
+        ...selectedHistoryItem,
+        chatMessages: [...(selectedHistoryItem.chatMessages || []), userMessageData]
+      };
+      setSelectedHistoryItem(updatedItem);
+
+      // Save to Firebase
+      await setDoc(doc(db, 'transcriptions', selectedHistoryItem.id), {
+        ...selectedHistoryItem,
+        chatMessages: [...(selectedHistoryItem.chatMessages || []), userMessageData]
+      }, { merge: true });
+
+      // Prepare context for the AI
+      const context = `
+        Transcription: ${selectedHistoryItem.rawText.substring(0, 8000)}
+        Analysis Summary: ${selectedHistoryItem.analysis?.summary || 'No analysis available'}
+        Strengths: ${selectedHistoryItem.analysis?.strengths.map(s => s.title + ': ' + s.description).join('\n') || 'None'}
+        Weaknesses: ${selectedHistoryItem.analysis?.weaknesses.map(w => w.title + ': ' + w.suggestion).join('\n') || 'None'}
+        Recommendations: ${selectedHistoryItem.analysis?.recommendations.map(r => r.action + ': ' + r.benefit).join('\n') || 'None'}
+      `;
+
+      // Get AI response
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4-1106-preview',
+          messages: [
+            {
+              role: 'system',
+              content: settings.language === 'sv' ?
+                'Du är en säljcoach som hjälper användaren att förbättra sina försäljningsfärdigheter baserat på ett transkriberat samtal. Svara på svenska.' :
+                'You are a sales coach helping the user improve their sales skills based on a transcribed call. Respond in English.'
+            },
+            {
+              role: 'system',
+              content: `Here's the context for this call:\n${context}\n\nPrevious conversation:\n${
+                (selectedHistoryItem.chatMessages || []).slice(-5).map(m => `${m.role}: ${m.content}`).join('\n')
+              }`
+            },
+            {
+              role: 'user',
+              content: userMessage
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices[0].message.content;
+
+      // Add AI response to chat
+      const aiMessageId = (Date.now() + 1).toString();
+      const aiMessageData: ChatMessage = {
+        id: aiMessageId,
+        role: 'assistant',
+        content: aiResponse,
+        timestamp: new Date()
+      };
+
+      // Update local state
+      const finalUpdatedItem = {
+        ...updatedItem,
+        chatMessages: [...updatedItem.chatMessages, aiMessageData]
+      };
+      setSelectedHistoryItem(finalUpdatedItem);
+
+      // Save to Firebase
+      await setDoc(doc(db, 'transcriptions', selectedHistoryItem.id), {
+        ...selectedHistoryItem,
+        chatMessages: [...updatedItem.chatMessages, aiMessageData]
+      }, { merge: true });
+
+    } catch (error) {
+      console.error('Error in chat:', error);
+      // Add error message to chat
+      const errorMessageId = (Date.now() + 2).toString();
+      const errorMessageData: ChatMessage = {
+        id: errorMessageId,
+        role: 'assistant',
+        content: settings.language === 'sv' ? 
+          'Ett fel uppstod vid behandling av din förfrågan. Försök igen.' : 
+          'An error occurred while processing your request. Please try again.',
+        timestamp: new Date()
+      };
+
+      const errorUpdatedItem = {
+        ...selectedHistoryItem,
+        chatMessages: [...(selectedHistoryItem.chatMessages || []), errorMessageData]
+      };
+      setSelectedHistoryItem(errorUpdatedItem);
+
+      await setDoc(doc(db, 'transcriptions', selectedHistoryItem.id), {
+        ...selectedHistoryItem,
+        chatMessages: [...(selectedHistoryItem.chatMessages || []), errorMessageData]
+      }, { merge: true });
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+
+  // Scroll to bottom of chat when messages change
+  useEffect(() => {
+    if (chatContainerRef.current && activeTab === 'chat') {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [selectedHistoryItem?.chatMessages, activeTab]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -470,7 +624,7 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#181818] text-gray-200 p-4">
+    <div className="min-h-screen text-gray-200 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold">
@@ -612,6 +766,12 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
                 >
                   {settings.language === 'sv' ? 'Analys' : 'Analysis'}
                 </button>
+                <button
+                  onClick={() => setActiveTab('chat')}
+                  className={`px-4 py-2 font-medium ${activeTab === 'chat' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400'}`}
+                >
+                  {settings.language === 'sv' ? 'Coach-chatt' : 'Coach Chat'}
+                </button>
               </div>
               
               <div className="overflow-y-auto flex-1 p-4">
@@ -639,7 +799,7 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
                       ))}
                     </div>
                   </>
-                ) : (
+                ) : activeTab === 'analysis' ? (
                   <>
                     {selectedHistoryItem.analysis ? (
                       <div className="space-y-6">
@@ -744,6 +904,75 @@ export default function AudioTranscriber({ apiKey, userId }: { apiKey: string; u
                       </div>
                     )}
                   </>
+                ) : (
+                  // Chat Tab
+                  <div className="h-full flex flex-col">
+                    <div 
+                      ref={chatContainerRef}
+                      className="flex-1 overflow-y-auto mb-4 space-y-4"
+                    >
+                      {selectedHistoryItem.chatMessages && selectedHistoryItem.chatMessages.length > 0 ? (
+                        selectedHistoryItem.chatMessages.map((message) => (
+                          <div 
+                            key={message.id}
+                            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[80%] p-3 rounded-lg ${
+                                message.role === 'user' 
+                                  ? 'bg-blue-600 text-white' 
+                                  : 'bg-[#383838] text-white'
+                              }`}
+                            >
+                              <p className="whitespace-pre-wrap">{message.content}</p>
+                              <p className="text-xs mt-1 opacity-70">
+                                {formatDate(message.timestamp)}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-400">
+                          {settings.language === 'sv' ? 
+                            'Ställ frågor till din AI-coach om detta samtal. Chatten kommer att baseras på transkriptionen och analysen.' : 
+                            'Ask your AI coach questions about this call. The chat will be based on the transcription and analysis.'}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <form onSubmit={handleChatSubmit} className="mt-auto">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={chatMessage}
+                          onChange={(e) => setChatMessage(e.target.value)}
+                          placeholder={
+                            settings.language === 'sv' ? 
+                              'Fråga din AI-coach om detta samtal...' : 
+                              'Ask your AI coach about this call...'
+                          }
+                          className="flex-1 p-2 bg-[#383838] border border-[#505050] rounded-md text-white"
+                          disabled={isSendingChat}
+                        />
+                        <button
+                          type="submit"
+                          disabled={!chatMessage.trim() || isSendingChat}
+                          className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-[#404040] disabled:text-gray-500"
+                        >
+                          {isSendingChat ? (
+                            <span>...</span>
+                          ) : (
+                            <FiSend className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">
+                        {settings.language === 'sv' ? 
+                          'AI-coachen kommer att svara baserat på samtalets transkription och analys.' : 
+                          'The AI coach will respond based on the call transcription and analysis.'}
+                      </p>
+                    </form>
+                  </div>
                 )}
               </div>
               
