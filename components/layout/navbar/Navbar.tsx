@@ -10,15 +10,18 @@ import { Button } from "@/components/ui/button";
 import { getAuth, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import useUserData from "@/hooks/useUser";
+import { useAudioTranscriber } from "@/context/AudioTranscriberProvider";
+import { FiPlus } from "react-icons/fi";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [openIcon, setOpenIcon] = useState(false);
   const { isLoggedIn } = useAuth();
-  const {user } = useUserData()
+  const { user } = useUserData();
   const auth = getAuth();
   const router = useRouter();
   const firstNameLetter = user?.name?.charAt(0);
+  const { setShowSettings, setShowUploadModal } = useAudioTranscriber();
 
   const handleSignOut = () => {
     signOut(auth)
@@ -69,23 +72,39 @@ export default function Navbar() {
       )}
 
       {isLoggedIn && (
-        <div className="relative flex items-center gap-2 flex-col">
-          <button
-            className="text-xl bg-[#E0B9E0] size-10 rounded-full hover:bg-[#DFA2DF] text-black"
-            onClick={() => setOpenIcon(!openIcon)}
-          >
-            {firstNameLetter}
-          </button>
+        <div className="relative flex items-center gap-2 flex-col ">
+          <div className="flex gap-2 items-center flex-row-reverse">
 
+            <button
+              className="text-xl bg-[#E0B9E0] size-10 rounded-full hover:bg-[#DFA2DF] text-black"
+              onClick={() => setOpenIcon(!openIcon)}
+            >
+              {firstNameLetter}
+            </button>
+
+
+            <button onClick={() => setShowUploadModal(true)} className="md:hidden block">
+              <span className="flex items-center justify-center w-10 h-10 bg-secondary  text-black rounded-full">
+                <FiPlus className="text-2xl md:text-3xl" />
+              </span>
+            </button>
+
+
+          </div>
           {openIcon && (
-            <div className="px-2 py-3 flex items-center justify-center text-white absolute top-12 right-0 z-20 rounded-md shadow-lg bg-[#18181B] ring-1 ring-black ring-opacity-5 ">
+            <div className="px-2 py-3 flex items-center justify-center text-white absolute top-12 right-0 z-20 rounded-md shadow-lg bg-[#18181B] ring-1 ring-black ring-opacity-5 border border-[#2D2D30]  ">
               <ul className="flex flex-col gap-2 w-52">
-                <li className="flex gap-2 items-center hover:bg-[#E0B9E0] px-4 py-2 rounded-md transition-all duration-300 ease-in-out cursor-pointer">
+                <li className="flex gap-2 items-center hover:bg-[#E0B9E0] px-4 py-2 rounded-md transition-all duration-300 ease-in-out cursor-pointer hover:text-black" onClick={() => {
+                  setShowSettings(true)
+                  setOpenIcon(false)
+                }}>
                   <Settings size={20} />{" "}
-                  <Link href="/settings">Inställningar</Link>
+                  <span >
+                    Inställningar
+                  </span>
                 </li>
                 <li
-                  className="flex gap-2 items-center hover:bg-[#E0B9E0] px-4 py-2 rounded-md transition-all duration-300 ease-in-out cursor-pointer"
+                  className="flex gap-2 items-center hover:bg-[#E0B9E0] px-4 py-2 rounded-md transition-all duration-300 ease-in-out cursor-pointer hover:text-black"
                   onClick={handleSignOut}
                 >
                   <LogOut size={20} /> <span>Logga ut</span>

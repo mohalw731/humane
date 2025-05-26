@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
+import { AudioTranscriberProvider } from "@/context/AudioTranscriberProvider";
 
 
 const geistSans = Outfit({
@@ -17,14 +18,19 @@ export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+  
+}>)
+{
   return (
     <html lang="en">
+      <AudioTranscriberProvider apiKey={process.env.NEXT_PUBLIC_OPENAI_API_KEY || ""} > 
+      
       <body
         className={`${geistSans.className} px-5`}
       >
         {children}
       </body>
+      </AudioTranscriberProvider>
     </html>
   );
 }

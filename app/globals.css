@@ -15,6 +15,13 @@ body {
   color: #BCCCE4;
 }
 
+.bg-primary {
+  background-color: #E0B9E0;
+}
+
+.bg-secondary {
+  background-color: #BCCCE4;
+}
 
 
 @layer base {

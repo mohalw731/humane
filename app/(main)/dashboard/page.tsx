@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import {
   doc,
@@ -16,16 +16,21 @@ import {
 import { db } from "@/configs/firebase";
 import useUserData from "@/hooks/useUser";
 import { toast } from "react-hot-toast";
-
 import { useAuth } from "@/hooks/useAuth";
 import Loader from "@/components/ui/loader";
 import Navbar from "@/components/layout/navbar/Navbar";
 import { Greeting } from "@/components/ui/GetGreating";
 import { JoinRoomModal } from "@/components/room/JoinRoomModal";
-import { RoomList } from "@/components/room/RoomList";
-import { RoomDetails } from "@/components/room/RoomDetails";
 import { CreateRoomModal } from "@/components/room/createRoom";
-import AudioTranscriber from "@/components/test";
+import AudioTranscriber from "@/components/AudioTranscriber";
+import {
+  AudioTranscriberProvider,
+  useAudioTranscriber,
+} from "@/context/AudioTranscriberProvider";
+import { Button } from "@/components/ui/button";
+import { FiPlus } from "react-icons/fi";
+import Settings from "@/components/layout/Settings";
+import Info from "@/components/Info";
 
 interface Room {
   id: string;
@@ -55,7 +60,7 @@ export default function Page() {
   const [createRoomOpen, setCreateRoomOpen] = useState(false);
   const [joinRoomOpen, setJoinRoomOpen] = useState(false);
 
-
+  const { setShowUploadModal,showSettings } = useAudioTranscriber();
 
   useEffect(() => {
     if (user) {
@@ -213,20 +218,17 @@ export default function Page() {
     toast.success("Copied to clipboard");
   };
 
-
-
-  if (loading || userDataLoading ) return <Loader />;
+  if (loading || userDataLoading) return <Loader />;
   if (!isLoggedIn) return router.push("/auth?mode=login");
 
   return (
     <div className="">
       <Navbar />
-      
 
       <div className="flex gap-4 mb-6 w-full items-center justify-between">
         <Greeting />
-       <div className="flex gap- items-center">
-       <CreateRoomModal
+        <div className="flex gap- items-center">
+          {/* <CreateRoomModal
           isAdmin={user?.isAdmin || false}
           isOpen={createRoomOpen}
           onOpenChange={setCreateRoomOpen}
@@ -240,8 +242,10 @@ export default function Page() {
           accessKey={joinKey}
           onAccessKeyChange={setJoinKey}
           onJoin={joinRoom}
-        />
-       </div>
+        /> */}
+
+        
+        </div>
       </div>
 
       {/* <RoomList
@@ -264,8 +268,11 @@ export default function Page() {
           onRemoveUser={removeUserFromRoom}
         />
       )} */}
-
-      <AudioTranscriber apiKey={process.env.NEXT_PUBLIC_OPENAI_API_KEY || ""} userId={user?.uid}/>
+      <Info />
+      <AudioTranscriber />
+      {showSettings && (
+        <Settings/>
+      )}
     </div>
   );
 }
