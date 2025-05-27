@@ -137,6 +137,7 @@ interface AudioTranscriberContextType {
   handleDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
   useRecommendedQuestion: (question: string) => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  updateTitle: (id: string, newTitle: string) => Promise<void>;
 
   // Utility functions
   formatTime: (seconds: number) => string;
@@ -313,26 +314,13 @@ export function AudioTranscriberProvider({
               ? "Vilka frågor borde jag ha ställt?"
               : "What questions should I have asked?",
         },
+       
         {
           id: "3",
           text:
             settings.language === "sv"
-              ? "Hur kan jag hantera invändningar bättre?"
-              : "How can I handle objections better?",
-        },
-        {
-          id: "4",
-          text:
-            settings.language === "sv"
               ? "Ge mig exempel på bättre formuleringar"
               : "Give me examples of better phrasing",
-        },
-        {
-          id: "5",
-          text:
-            settings.language === "sv"
-              ? "Hur kan jag förbättra min avslutning?"
-              : "How can I improve my closing?",
         },
       ];
 
@@ -1047,6 +1035,37 @@ export function AudioTranscriberProvider({
     }
   };
 
+  const updateTitle = async (id: string, newTitle: string) => {
+  try {
+    await setDoc(
+      doc(db, "transcriptions", id),
+      {
+        aiGeneratedTitle: newTitle,
+      },
+      { merge: true }
+    );
+    
+    // Update local state
+    setHistory(history.map(item => 
+      item.id === id ? {...item, aiGeneratedTitle: newTitle} : item
+    ));
+    
+    if (selectedHistoryItem?.id === id) {
+      setSelectedHistoryItem({
+        ...selectedHistoryItem,
+        aiGeneratedTitle: newTitle
+      });
+    }
+  } catch (error) {
+    console.error("Error updating title:", error);
+    alert(
+      settings.language === "sv"
+        ? "Kunde inte uppdatera titeln"
+        : "Could not update title"
+    );
+  }
+};
+
   // Create the context value object
   const contextValue: AudioTranscriberContextType = {
     // State
@@ -1096,6 +1115,7 @@ export function AudioTranscriberProvider({
     handleDragLeave,
     useRecommendedQuestion,
     handleKeyDown,
+    updateTitle,
 
     // Utility functions
     formatTime,

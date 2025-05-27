@@ -31,6 +31,9 @@ import { Button } from "@/components/ui/button";
 import { FiPlus } from "react-icons/fi";
 import Settings from "@/components/layout/Settings";
 import Info from "@/components/Info";
+import { CallChart } from "@/components/FeedbackChart";
+import DeleteCallModal from "@/components/layout/DeleteCallModal";
+import UploadCallModal from "@/components/layout/UploadCallModal";
 
 interface Room {
   id: string;
@@ -60,7 +63,8 @@ export default function Page() {
   const [createRoomOpen, setCreateRoomOpen] = useState(false);
   const [joinRoomOpen, setJoinRoomOpen] = useState(false);
 
-  const { setShowUploadModal,showSettings } = useAudioTranscriber();
+  const { showSettings, history, showDeleteConfirmation, showUploadModal } =
+    useAudioTranscriber();
 
   useEffect(() => {
     if (user) {
@@ -222,57 +226,18 @@ export default function Page() {
   if (!isLoggedIn) return router.push("/auth?mode=login");
 
   return (
-    <div className="">
+    <div>
       <Navbar />
+      <Greeting />
+      <section className="">
+        <Info />
 
-      <div className="flex gap-4 mb-6 w-full items-center justify-between">
-        <Greeting />
-        <div className="flex gap- items-center">
-          {/* <CreateRoomModal
-          isAdmin={user?.isAdmin || false}
-          isOpen={createRoomOpen}
-          onOpenChange={setCreateRoomOpen}
-          roomName={newRoomName}
-          onRoomNameChange={setNewRoomName}
-          onCreate={createRoom}
-        />
-        <JoinRoomModal
-          isOpen={joinRoomOpen}
-          onOpenChange={setJoinRoomOpen}
-          accessKey={joinKey}
-          onAccessKeyChange={setJoinKey}
-          onJoin={joinRoom}
-        /> */}
-
-        
-        </div>
-      </div>
-
-      {/* <RoomList
-        rooms={rooms}
-        activeRoomId={activeRoom?.id || null}
-        isAdmin={user?.isAdmin || false}
-        currentUserId={user?.uid || "" }
-        onRoomClick={setActiveRoom}
-        onCopyAccessKey={copyToClipboard}
-        onDeleteRoom={deleteRoom}
-      />
-
-      {activeRoom && (
-        <RoomDetails
-          room={activeRoom}
-          users={users}
-          isAdmin={user?.isAdmin || false}
-          currentUserId={user?.uid || ""}
-          onToggleAdminStatus={toggleAdminStatus}
-          onRemoveUser={removeUserFromRoom}
-        />
-      )} */}
-      <Info />
-      <AudioTranscriber />
-      {showSettings && (
-        <Settings/>
-      )}
+        <CallChart calls={history} />
+        <AudioTranscriber />
+      </section>
+      {showSettings && <Settings />}
+      {showDeleteConfirmation && <DeleteCallModal />}
+      {showUploadModal && <UploadCallModal />}
     </div>
   );
 }

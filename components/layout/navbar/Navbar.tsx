@@ -39,7 +39,7 @@ export default function Navbar() {
 
   return (
     <main className="flex justify-between items-center">
-      <Link href="/" className="flex items-center gap-2">
+      <Link href={isLoggedIn ? "/dashboard" : "/"} className="flex items-center gap-2">
         <Image
           src="/logo.png"
           alt="logo"
