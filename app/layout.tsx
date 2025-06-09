@@ -26,7 +26,7 @@ export default function RootLayout({
       <AudioTranscriberProvider apiKey={process.env.NEXT_PUBLIC_OPENAI_API_KEY || ""} > 
       
       <body
-        className={`${geistSans.className} px-5`}
+        className={`${geistSans.className}`}
       >
         {children}
       </body>

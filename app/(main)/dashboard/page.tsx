@@ -34,6 +34,8 @@ import Info from "@/components/Info";
 import { CallChart } from "@/components/FeedbackChart";
 import DeleteCallModal from "@/components/layout/DeleteCallModal";
 import UploadCallModal from "@/components/layout/UploadCallModal";
+import Gradient from "@/components/ui/gradient";
+import { Upload } from "lucide-react";
 
 interface Room {
   id: string;
@@ -63,7 +65,7 @@ export default function Page() {
   const [createRoomOpen, setCreateRoomOpen] = useState(false);
   const [joinRoomOpen, setJoinRoomOpen] = useState(false);
 
-  const { showSettings, history, showDeleteConfirmation, showUploadModal } =
+  const { showSettings, history, showDeleteConfirmation, showUploadModal,setShowUploadModal } =
     useAudioTranscriber();
 
   useEffect(() => {
@@ -226,15 +228,19 @@ export default function Page() {
   if (!isLoggedIn) return router.push("/auth?mode=login");
 
   return (
-    <div>
+    <div className="px-5">
       <Navbar />
-      <Greeting />
-      <section className="">
-        <Info />
-
-        <CallChart calls={history} />
-        <AudioTranscriber />
-      </section>
+      <Gradient />
+      <div className="flex items-center justify-between mb-2">
+        <Greeting />
+        <button className="bg-secondary px-3 py-2 rounded-xl text-base  text-[#141414]  hover:bg-blue-200 transition-all duration-300 ease-in-out  items-center gap-2 md:flex hidden"
+        onClick={() => setShowUploadModal(true)}>
+        <Upload className="size-4" />  Ladda upp samtal
+        </button>
+      </div>
+      <Info />
+      <CallChart calls={history} />
+      <AudioTranscriber />
       {showSettings && <Settings />}
       {showDeleteConfirmation && <DeleteCallModal />}
       {showUploadModal && <UploadCallModal />}

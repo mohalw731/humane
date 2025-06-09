@@ -2,14 +2,13 @@ import { useAudioTranscriber } from '@/context/AudioTranscriberProvider'
 import { ScrollArea } from '@radix-ui/react-scroll-area'
 import React from 'react'
 import { FiX } from 'react-icons/fi'
-import { Button } from '../ui/button'
 
 export default function Settings() {
     const { setShowSettings, settings,handleSettingsChange  } = useAudioTranscriber()
   return (
 
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-2 z-50">
-            <div className="bg-[#141414] rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-[#1E1F21] ">
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-2 z-50 ">
+            <div className="bg-[#141414] rounded-lg shadow-xl w-full max-w-2xl max-h-[60vh] flex flex-col border border-[#1E1F21] overflow-hidden hover:overflow-y-auto">
               <div className="p-4  flex justify-between items-center">
                 <h2 className="text-xl text-white">Inställningar</h2>
                 <button

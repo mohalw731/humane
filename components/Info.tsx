@@ -1,5 +1,13 @@
-import { useAudioTranscriber, type TranscriptionHistoryItem } from "@/context/AudioTranscriberProvider";
-import { ArrowUpFromLineIcon, Trophy } from "lucide-react";
+import {
+  useAudioTranscriber,
+  type TranscriptionHistoryItem,
+} from "@/context/AudioTranscriberProvider";
+import {
+  ArrowUpFromLineIcon,
+  Trophy,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -17,8 +25,19 @@ interface WeeklyBestCall {
 
 export default function Info() {
   const { history, setShowUploadModal } = useAudioTranscriber();
-  const [latestCallSummary, setLatestCallSummary] = useState<LatestCallSummary | null>(null);
-  const [weeklyBestCall, setWeeklyBestCall] = useState<WeeklyBestCall | null>(null);
+  const [latestCallSummary, setLatestCallSummary] =
+    useState<LatestCallSummary | null>(null);
+  const [weeklyBestCall, setWeeklyBestCall] = useState<WeeklyBestCall | null>(
+    null
+  );
+  const [monthlyStats, setMonthlyStats] = useState({
+    currentMonthCalls: 0,
+    prevMonthCalls: 0,
+    currentMonthAvg: 0,
+    prevMonthAvg: 0,
+    currentWeekCalls: 0,
+    prevWeekCalls: 0,
+  });
 
   // Calculate overall average rating
   const averageRating =
@@ -49,56 +68,107 @@ export default function Info() {
   // Get current week number
   const getWeekNumber = (date: Date) => {
     const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+    const pastDaysOfYear =
+      (date.getTime() - firstDayOfYear.getTime()) / 86400000;
     return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
   };
 
-  // Update latest call summary when history changes
+  // Calculate monthly and weekly stats
+  const calculateStats = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const currentWeek = getWeekNumber(now);
+
+    // Previous month
+    let prevMonth = currentMonth - 1;
+    let prevYear = currentYear;
+    if (prevMonth < 0) {
+      prevMonth = 11;
+      prevYear--;
+    }
+
+    // Previous week
+    let prevWeek = currentWeek - 1;
+    let prevWeekYear = currentYear;
+    if (prevWeek < 1) {
+      prevWeek = 52;
+      prevWeekYear--;
+    }
+
+    const currentMonthCalls = history.filter((call) => {
+      const callDate = new Date(call.timestamp);
+      return (
+        callDate.getMonth() === currentMonth &&
+        callDate.getFullYear() === currentYear
+      );
+    });
+
+    const prevMonthCalls = history.filter((call) => {
+      const callDate = new Date(call.timestamp);
+      return (
+        callDate.getMonth() === prevMonth && callDate.getFullYear() === prevYear
+      );
+    });
+
+    const currentWeekCalls = history.filter((call) => {
+      const callDate = new Date(call.timestamp);
+      return (
+        getWeekNumber(callDate) === currentWeek &&
+        callDate.getFullYear() === currentYear
+      );
+    });
+
+    const prevWeekCalls = history.filter((call) => {
+      const callDate = new Date(call.timestamp);
+      return (
+        getWeekNumber(callDate) === prevWeek &&
+        callDate.getFullYear() === prevWeekYear
+      );
+    });
+
+    const currentMonthAvg =
+      currentMonthCalls.length > 0
+        ? currentMonthCalls.reduce(
+            (sum, item) => sum + (item.analysis?.score || 0),
+            0
+          ) / currentMonthCalls.length
+        : 0;
+
+    const prevMonthAvg =
+      prevMonthCalls.length > 0
+        ? prevMonthCalls.reduce(
+            (sum, item) => sum + (item.analysis?.score || 0),
+            0
+          ) / prevMonthCalls.length
+        : 0;
+
+    setMonthlyStats({
+      currentMonthCalls: currentMonthCalls.length,
+      prevMonthCalls: prevMonthCalls.length,
+      currentMonthAvg,
+      prevMonthAvg,
+      currentWeekCalls: currentWeekCalls.length,
+      prevWeekCalls: prevWeekCalls.length,
+    });
+  };
+
+  // Update stats when history changes
   useEffect(() => {
+    calculateStats();
+
     if (history.length > 0) {
       updateLatestCallSummary();
-    } else {
-      setLatestCallSummary(null);
-    }
-  }, [history]);
-
-  // Update weekly best call when history changes or on Friday
-  useEffect(() => {
-    if (history.length > 0) {
       updateWeeklyBestCall();
     } else {
+      setLatestCallSummary(null);
       setWeeklyBestCall(null);
     }
-
-    // Set up Friday check
-    const checkFriday = () => {
-      const today = new Date();
-      if (today.getDay() === 5) { // Friday
-        updateWeeklyBestCall();
-      }
-    };
-
-    // Check every day at midnight
-    const now = new Date();
-    const midnight = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 1,
-      0, 0, 0
-    );
-    const timeUntilMidnight = midnight.getTime() - now.getTime();
-
-    const timer = setTimeout(() => {
-      checkFriday();
-      setInterval(checkFriday, 86400000); // Check daily
-    }, timeUntilMidnight);
-
-    return () => clearTimeout(timer);
   }, [history]);
 
   const updateLatestCallSummary = () => {
     const latestCall = history[0];
-    
+
     if (!latestCall?.analysis) {
       setLatestCallSummary(null);
       return;
@@ -107,19 +177,19 @@ export default function Info() {
     const strengths = latestCall.analysis.strengths
       ? latestCall.analysis.strengths
           .slice(0, 3)
-          .map(strength => strength.title)
+          .map((strength) => strength.title)
       : ["Inga styrkor identifierade"];
 
     const weaknesses = latestCall.analysis.weaknesses
       ? latestCall.analysis.weaknesses
           .slice(0, 3)
-          .map(weakness => weakness.title)
+          .map((weakness) => weakness.title)
       : ["Inga förbättringsområden identifierade"];
 
     setLatestCallSummary({
       strengths,
       weaknesses,
-      lastUpdated: latestCall.timestamp
+      lastUpdated: latestCall.timestamp,
     });
   };
 
@@ -128,119 +198,135 @@ export default function Info() {
     const currentWeek = getWeekNumber(now);
     const currentYear = now.getFullYear();
 
-    const thisWeeksCalls = history.filter(call => {
+    const thisWeeksCalls = history.filter((call) => {
       const callDate = new Date(call.timestamp);
       return (
-        getWeekNumber(callDate) === currentWeek && 
+        getWeekNumber(callDate) === currentWeek &&
         callDate.getFullYear() === currentYear
       );
     });
 
-    const bestCall = thisWeeksCalls.reduce<TranscriptionHistoryItem | null>((best, current) => {
-      if (!current.analysis) return best;
-      if (!best) return current;
-      return (current.analysis.score > (best.analysis?.score || 0)) ? current : best;
-    }, null);
+    const bestCall = thisWeeksCalls.reduce<TranscriptionHistoryItem | null>(
+      (best, current) => {
+        if (!current.analysis) return best;
+        if (!best) return current;
+        return current.analysis.score > (best.analysis?.score || 0)
+          ? current
+          : best;
+      },
+      null
+    );
 
     setWeeklyBestCall({
       call: bestCall,
       weekNumber: currentWeek,
-      year: currentYear
+      year: currentYear,
     });
   };
 
+  // Helper function to calculate absolute difference
+  const getAbsoluteDifference = (current: number, previous: number) => {
+    return current - previous;
+  };
+
+  // Helper function to render week difference indicator
+  const renderWeekDifference = (current: number, previous: number) => {
+    const difference = getAbsoluteDifference(current, previous);
+
+    if (previous === 0) return null;
+
+    return (
+      <span
+        className={`flex items-center text-lg ${
+          difference >= 0 ? "text-green-500" : "text-red-500"
+        }`}
+      >
+        {difference >= 0 ? "+" : ""}
+        {difference}
+      </span>
+    );
+  };
+
+  // Helper function to render trend indicator
+  const renderTrend = (current: number, previous: number) => {
+    const percentage = ((current - previous) / previous) * 100;
+    const isPositive = percentage >= 0;
+
+    if (previous === 0) return null;
+
+    return (
+      <span
+        className={`flex items-center text-lg ${
+          isPositive ? "text-green-700" : "text-red-500"
+        }`}
+      >
+        {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+        {Math.abs(Math.round(percentage))}%
+      </span>
+    );
+  };
+
   return (
-    <section className="flex gap-4 lg:flex-nowrap flex-wrap-reverse md:items-start items-center md:justify-start justify-center mb-5 w-full">     
-      {/* Week's Best Call Widget */}
-      {weeklyBestCall?.call && (
-        <div className="bg-[#FFD700] text-black h-52 md:max-w-xs w-full rounded-xl p-4 flex flex-col relative">
-          <div className="absolute top-3 right-3 bg-black text-[#FFD700] rounded-full p-2">
-            <Trophy size={20} />
-          </div>
-          
-          <h3 className="font-bold text-lg mb-2">Veckans bästa samtal</h3>
-          <p className="text-sm mb-1">Vecka {weeklyBestCall.weekNumber}, {weeklyBestCall.year}</p>
-          
-          <div className="flex-1 flex flex-col justify-center">
-            <h4 className="font-semibold text-md truncate">
-              {weeklyBestCall.call.aiGeneratedTitle || "Ingen titel"}
-            </h4>
-            <p className="text-4xl font-bold my-2">
-              {weeklyBestCall.call.analysis?.score.toFixed(1) || "N/A"}
-            </p>
-            <p className="text-xs">
-              {weeklyBestCall.call.framework} • {weeklyBestCall.call.callType}
-            </p>
-          </div>
+    <section className="flex gap-4 lg:flex-nowrap flex-wrap-reverse md:items-start items-center md:justify-start justify-center mb-5 w-full">
+      {/* Average Rating (This Month) */}
+      <div className="bg-secondary p-5 text-black  w-full rounded-xl flex flex-col  relative">
+        <p>Månadens genomsnittligt betyg</p>
 
-          <Link 
-            href={`/dashboard/${weeklyBestCall.call.id}`}
-            className="mt-2 text-sm font-medium text-black hover:underline self-end"
-          >
-            Visa detaljer →
-          </Link>
-        </div>
-      )}
-
-      {/* Average Rating */}
-      <div className="bg-primary text-black h-52 md:max-w-52 w-full rounded-xl flex flex-col items-center justify-center">
-        <h2 className="text-7xl">{averageRating?.toFixed(1) || "N/A"}</h2>
-        <p>Genomsnittligt betyg</p>
+        <h2 className="text-7xl py-6">
+          {monthlyStats.currentMonthAvg.toFixed(1)}
+        </h2>
+        {monthlyStats.prevMonthAvg > 0 && (
+          
+          <div className="absolute bottom-3 flex items-center gap-2">
+            <span>Senaste månaden</span>
+            {renderTrend(
+              monthlyStats.currentMonthAvg,
+              monthlyStats.prevMonthAvg
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Call Count */}
-      <div className="bg-[#C9DC87] text-black h-52 md:max-w-52 w-full rounded-xl flex flex-col items-center justify-center">
-        <h2 className="text-7xl">{history.length || "N/A"}</h2>
-        <p>Antal samtal</p>
+      {/* Total Calls */}
+      <div className="bg-[#F6D6C9] p-5 text-black  w-full rounded-xl flex flex-col  relative">
+        <p>Totalt antal samtal</p>
+
+        <h2 className="text-7xl py-6">{history.length}</h2>
+        {monthlyStats.prevMonthCalls > 0 && (
+          <div className="absolute bottom-3 flex items-center gap-2">
+            <span>Senaste månaden</span>
+            {renderTrend(history.length, monthlyStats.prevMonthCalls)}
+          </div>
+        )}
+      </div>
+
+      {/* This Week Calls */}
+      <div className="bg-[#C9E4C5] p-5 text-black  w-full rounded-xl flex flex-col  relative">
+        <div className="">
+          <p>Denna veckas samtal</p>
+
+          <h2 className="text-7xl py-6">{monthlyStats.currentWeekCalls}</h2>
+        </div>
+        {monthlyStats.prevWeekCalls > 0 && (
+          <div className="absolute bottom-3 flex items-center gap-2">
+            <span>Senaste veckan</span>
+            {renderWeekDifference(
+              monthlyStats.currentWeekCalls,
+              monthlyStats.prevWeekCalls
+            )}
+          </div>
+        )}
       </div>
 
       {/* Most Used Playbook */}
-      <div className="bg-[#ffdfba] text-black h-52 md:max-w-xs min-w-[200px] w-full rounded-xl flex flex-col items-center justify-center">
-        <h2 className="text-6xl">{mostUsedPlaybook || "N/A"}</h2>
+      <div className="bg-[#F9E6B3] p-4 text-black  w-full rounded-xl flex flex-col  relative">
         <p>Mest använda playbook</p>
+
+        <h2 className="text-6xl py-8">{mostUsedPlaybook || "N/A"}</h2>
       </div>
 
-      {/* Latest Call Summary */}
-      {latestCallSummary && (
-        <div className="bg-[#bae1ff] text-black h-52 md:max-w-xs w-full rounded-xl p-4 flex flex-col">
-          <h3 className="font-bold text-lg mb-2">Senaste samtalet</h3>
-          <div className="flex-1 overflow-y-auto">
-            <div className="mb-3">
-              <h4 className="font-semibold text-sm">3 saker du gjorde bra:</h4>
-              <ul className="text-xs list-disc pl-5">
-                {latestCallSummary.strengths.map((item, i) => (
-                  <li key={`strength-${i}`}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="mb-3">
-              <h4 className="font-semibold text-sm">3 saker att förbättra:</h4>
-              <ul className="text-xs list-disc pl-5">
-                {latestCallSummary.weaknesses.map((item, i) => (
-                  <li key={`weakness-${i}`}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <p className="text-[10px] text-gray-600 mt-1">
-            {latestCallSummary.lastUpdated.toLocaleDateString('sv-SE')}
-          </p>
-        </div>
-      )}
+     
 
-      {/* Upload Call */}
-      <div className="bg-[#18181b] text-white md:max-w-sm h-52 w-full rounded-xl py-10 px-6 flex flex-col items-start border border-[#1E1F21]">
-        <span className="text-xl mb-2">Ladda upp ett samtal</span>
-        <p className="text-sm text-gray-500">
-          Ladda upp ett samtal och få en rekommendation på vad du ska göra
-        </p>
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="my-7 flex items-center gap-3 bg-secondary text-black px-4 py-2 rounded-xl text-md"
-        >
-          Ladda upp <ArrowUpFromLineIcon className="w-4 h-4" />
-        </button>
-      </div>
     </section>
   );
 }

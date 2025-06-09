@@ -22,6 +22,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/configs/firebase";
 import useUserData from "@/hooks/useUser";
+import { useRouter } from "next/navigation";
 
 // Types
 export interface TranscriptionSegment {
@@ -187,7 +188,7 @@ export function AudioTranscriberProvider({
   >([]);
   const [isTextareaExpanded, setIsTextareaExpanded] = useState(false);
   const { user } = useUserData();
-
+const router = useRouter();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userId = user?.uid || null;
@@ -370,10 +371,12 @@ export function AudioTranscriberProvider({
     setIsDeleting(itemToDelete);
     try {
       await deleteDoc(doc(db, "transcriptions", itemToDelete));
-      // If the deleted item is currently selected, close the modal
+      // If the deleted item is currently selected, close the modal    '
+        
       if (selectedHistoryItem?.id === itemToDelete) {
         setSelectedHistoryItem(null);
       }
+
     } catch (error) {
       console.error("Error deleting transcription:", error);
       alert(
@@ -385,6 +388,7 @@ export function AudioTranscriberProvider({
       setIsDeleting(null);
       setShowDeleteConfirmation(false);
       setItemToDelete(null);
+      router.push("/dashboard");
     }
   };
 

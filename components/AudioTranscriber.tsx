@@ -1,16 +1,7 @@
 "use client";
 
 import { useAudioTranscriber } from "../context/AudioTranscriberProvider";
-import {
-  FiX,
-  FiTrash2,
-  FiSend,
-  FiUpload,
-  FiMessageSquare,
-  FiFileText,
-  FiBarChart2,
-} from "react-icons/fi";
-import Markdown from "react-markdown";
+import { FiTrash2, FiFileText } from "react-icons/fi";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +33,7 @@ export default function AudioTranscriber() {
       .map((_, index) => (
         <Card
           key={`skeleton-${index}`}
-          className="bg-[#141414] border-[#1E1F21] overflow-hidden"
+          className="bg-[#141414] border-[#1E1F21] overflow-hidden mb-2"
         >
           <div className="p-4 h-40">
             <Skeleton className="h-6 w-3/4 mb-2 bg-[#2d2d30]" />
@@ -53,7 +44,7 @@ export default function AudioTranscriber() {
   };
 
   return (
-    <div className=" bg-[#121212] text-gray-200 w-full">
+    <div className="  text-gray-200 w-full">
       <div className="w-full">
         {/* History Cards */}
         <div className="mb-8">
@@ -69,14 +60,15 @@ export default function AudioTranscriber() {
               </Button>
             </div>
           ) : (
-            <div className="">
-              {isUploading && renderSkeletonCards()}
+              <ScrollArea className=" bg-[#18181b] p-4 rounded-lg border border-[#1E1F21] grid gap-2 w-full max-h-[calc(100vh-150px)] hover:overflow-y-auto">
+                <h2 className="text-2xl text-white py-2 px-1">Samtalshistorik</h2>
 
-              <div className=" bg-[#18181b] p-4 rounded-lg border border-[#1E1F21] grid gap-2 w-full">
+                {isUploading && renderSkeletonCards()}
+
                 {history.map((item) => (
                   <Card
                     key={item.id}
-                    className="border border-[#1E1F21]  rounded-xl p-2 bg-[#141414] cursor-pointer  transition-colors overflow-hidden w-full"
+                    className="border border-[#1E1F21]  rounded-xl p-2 bg-[#141414] cursor-pointer  transition-colors overflow-hidden w-full mb-2"
                     onClick={() => router.push(`/dashboard/${item.id}`)}
                   >
                     <div className="p-4">
@@ -142,11 +134,10 @@ export default function AudioTranscriber() {
                     </div>
                   </Card>
                 ))}
-              </div>
-            </div>
+              </ScrollArea>
+
           )}
         </div>
-
       </div>
     </div>
   );
